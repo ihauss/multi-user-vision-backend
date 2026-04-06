@@ -6,4 +6,5 @@ from datetime import datetime
 class Camera(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: Optional[str] = None
+    api_key_hash: str
     created_at: datetime = Field(default_factory=datetime.utcnow)

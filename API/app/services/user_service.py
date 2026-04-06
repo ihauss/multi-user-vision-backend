@@ -1,6 +1,6 @@
 from sqlmodel import Session, select
 from app.models.user import User
-from app.core.security import hash_password, verify_password
+from app.core.security import hash_password, verify_password, create_access_token
 
 
 class UserService:
@@ -43,3 +43,21 @@ class UserService:
             return None
 
         return user
+
+
+    def create_user_with_token(self, session: Session, username: str, password: str):
+        user = self.create_user(session, username, password)
+        token = create_access_token({"sub": str(user.id)})
+
+        return user, token
+
+
+    def login_with_token(self, session: Session, username: str, password: str):
+        user = self.authenticate(session, username, password)
+
+        if not user:
+            return None
+
+        token = create_access_token({"sub": str(user.id)})
+
+        return token
