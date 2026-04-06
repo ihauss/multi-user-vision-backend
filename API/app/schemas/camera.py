@@ -30,3 +30,8 @@ class CameraPublic(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AddUserRequest(BaseModel):
+    username: str
+
