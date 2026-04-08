@@ -91,3 +91,82 @@ def add_user_to_camera(
     session.commit()
 
     return {"message": "User added to camera"}
+
+
+def remove_user_from_camera(session, camera_id, username, current_user):
+    camera = session.get(Camera, camera_id)
+    if not camera:
+        raise HTTPException(status_code=404, detail="Camera not found")
+
+    # ✅ Vérifier owner
+    owner_link = session.exec(
+        select(CameraUser).where(
+            CameraUser.camera_id == camera_id,
+            CameraUser.user_id == current_user.id,
+            CameraUser.role == "owner"
+        )
+    ).first()
+
+    if not owner_link:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # 🔍 Trouver user
+    user = session.exec(
+        select(User).where(User.username == username)
+    ).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # 🚫 Empêcher de supprimer un owner
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot remove yourself")
+
+    # 🔍 Vérifier lien
+    link = session.exec(
+        select(CameraUser).where(
+            CameraUser.camera_id == camera_id,
+            CameraUser.user_id == user.id
+        )
+    ).first()
+
+    if not link:
+        raise HTTPException(status_code=404, detail="User not in camera")
+
+    session.delete(link)
+    session.commit()
+
+    return {"message": "User removed"}
+
+
+def delete_camera(session, camera_id, current_user):
+    camera = session.get(Camera, camera_id)
+    if not camera:
+        raise HTTPException(status_code=404, detail="Camera not found")
+
+    # ✅ vérifier owner
+    owner_link = session.exec(
+        select(CameraUser).where(
+            CameraUser.camera_id == camera_id,
+            CameraUser.user_id == current_user.id,
+            CameraUser.role == "owner"
+        )
+    ).first()
+
+    if not owner_link:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # 🧹 supprimer toutes les relations
+    links = session.exec(
+        select(CameraUser).where(CameraUser.camera_id == camera_id)
+    ).all()
+
+    for link in links:
+        session.delete(link)
+
+    # 🗑 supprimer la caméra
+    session.delete(camera)
+
+    session.commit()
+
+    return {"message": "Camera deleted"}
