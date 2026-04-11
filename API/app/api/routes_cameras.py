@@ -7,7 +7,7 @@ from app.services.camera_service import create_camera, add_user_to_camera, remov
 from app.services.frame_service import push_frame, get_last_frame
 from app.schemas.camera import CameraResponse, AddUserRequest
 from app.models import User
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_frame_repository
 
 
 router = APIRouter(prefix="/cameras", tags=["cameras"])
@@ -73,7 +73,8 @@ def delete_camera_route(
 def push_frame_route(
     request: Request,
     payload: dict,
-    session: Session = Depends(get_session),
+    repo = Depends(get_frame_repository),
+    session: Session = Depends(get_session)
 ):
     auth = request.headers.get("Authorization")
 
@@ -85,7 +86,8 @@ def push_frame_route(
     return push_frame(
         session=session,
         api_key=api_key,
-        data=payload["data"]
+        data=payload["data"],
+        repo=repo
     )
 
 
@@ -93,10 +95,12 @@ def push_frame_route(
 def get_frame(
     camera_id: int,
     session: Session = Depends(get_session),
+    repo = Depends(get_frame_repository),
     current_user = Depends(get_current_user)
 ):
     return get_last_frame(
         session=session,
         camera_id=camera_id,
-        current_user=current_user
+        current_user=current_user,
+        repo=repo
     )

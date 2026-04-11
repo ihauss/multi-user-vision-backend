@@ -6,15 +6,12 @@ from app.models import Camera, CameraUser
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# 🔥 stockage temporaire (remplacé par Redis plus tard)
-FRAME_STORE = {}
-
 
 def verify_api_key(api_key: str, hashed: str) -> bool:
     return pwd_context.verify(api_key, hashed)
 
 
-def push_frame(session, api_key: str, data: str):
+def push_frame(session, api_key: str, data: str, repo):
     cameras = session.exec(select(Camera)).all()
 
     camera = None
@@ -26,15 +23,12 @@ def push_frame(session, api_key: str, data: str):
     if not camera:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
-    # 📡 Stockage (temporaire)
-    if camera.id not in FRAME_STORE:
-        FRAME_STORE[camera.id] = []
-    FRAME_STORE[camera.id].append(data)
+    repo.save(camera.id, data)
 
     return {"message": "Frame received"}
 
 
-def get_last_frame(session, camera_id: int, current_user):
+def get_last_frame(session, camera_id: int, current_user, repo):
     camera = session.get(Camera, camera_id)
     if not camera:
         raise HTTPException(status_code=404, detail="Camera not found")
@@ -51,7 +45,7 @@ def get_last_frame(session, camera_id: int, current_user):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # 📡 récupérer dernière frame
-    frames = FRAME_STORE.get(camera_id, [])
+    frames = repo.get(camera_id)
 
     if not frames:
         return {"data": None}
