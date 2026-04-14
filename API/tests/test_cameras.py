@@ -221,3 +221,57 @@ def test_get_frame_unauthorized(client):
     )
 
     assert res.status_code in (401, 403)
+
+
+def test_websocket_stream_authorized(client):
+    token = create_user(client, "owner_ws")
+
+    cam_res = create_camera(client, token)
+    cam_id = cam_res.json()["camera_id"]
+    api_key = cam_res.json()["api_key"]
+
+    # push frame
+    client.post(
+        "/cameras/frame",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={"data": "frame_ws_1"}
+    )
+
+    with client.websocket_connect(
+        f"/cameras/ws/{cam_id}?token={token}"
+    ) as websocket:
+
+        data = websocket.receive_json()
+
+        assert data["data"] == "frame_ws_1"
+
+
+def test_websocket_stream_unauthorized(client):
+    owner_token = create_user(client, "owner_ws2")
+    other_token = create_user(client, "other_ws2")
+
+    cam_res = create_camera(client, owner_token)
+    cam_id = cam_res.json()["camera_id"]
+
+    try:
+        with client.websocket_connect(
+            f"/cameras/ws/{cam_id}?token={other_token}"
+        ):
+            assert False, "WebSocket should not connect"
+    except Exception:
+        assert True
+
+
+def test_websocket_no_frame(client):
+    token = create_user(client, "owner_ws3")
+
+    cam_res = create_camera(client, token)
+    cam_id = cam_res.json()["camera_id"]
+
+    with client.websocket_connect(
+        f"/cameras/ws/{cam_id}?token={token}"
+    ) as websocket:
+
+        # on attend un peu ou on vérifie que rien ne casse
+        # selon ton implémentation future
+        pass

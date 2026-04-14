@@ -170,3 +170,15 @@ def delete_camera(session, camera_id, current_user):
     session.commit()
 
     return {"message": "Camera deleted"}
+
+
+def check_camera_access(session, camera_id: int, user_id: int):
+    link = session.exec(
+        select(CameraUser).where(
+            CameraUser.camera_id == camera_id,
+            CameraUser.user_id == user_id
+        )
+    ).first()
+
+    if not link:
+        raise HTTPException(status_code=403, detail="Not authorized")

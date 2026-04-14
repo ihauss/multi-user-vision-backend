@@ -45,9 +45,9 @@ def get_last_frame(session, camera_id: int, current_user, repo):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # 📡 récupérer dernière frame
-    frames = repo.get(camera_id)
+    frame = repo.get(camera_id)
 
-    if not frames:
+    if not frame:
         return {"data": None}
 
-    return {"data": frames[-1]}
+    return {"data": frame}

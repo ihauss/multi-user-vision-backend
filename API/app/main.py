@@ -3,7 +3,7 @@ from sqlmodel import SQLModel
 from contextlib import asynccontextmanager
 
 from app.database import engine
-from app.models import User, Camera, CameraUser
+from app.models import User, Camera, CameraUser, Event
 from app.api.routes_users import router as user_router
 from app.api.routes_cameras import router as camera_router
 

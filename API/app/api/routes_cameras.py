@@ -1,13 +1,17 @@
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
 from fastapi import Request, HTTPException
+from fastapi import WebSocket, WebSocketDisconnect
+import asyncio
 
 from app.database import get_session
 from app.services.camera_service import create_camera, add_user_to_camera, remove_user_from_camera, delete_camera
 from app.services.frame_service import push_frame, get_last_frame
+from app.services.camera_service import check_camera_access
 from app.schemas.camera import CameraResponse, AddUserRequest
-from app.models import User
+from app.models import User, Camera
 from app.core.dependencies import get_current_user, get_frame_repository
+from app.core.dependencies import get_user_from_token
 
 
 router = APIRouter(prefix="/cameras", tags=["cameras"])
@@ -104,3 +108,48 @@ def get_frame(
         current_user=current_user,
         repo=repo
     )
+
+
+@router.websocket("/ws/{camera_id}")
+async def websocket_camera_stream(
+    websocket: WebSocket,
+    camera_id: int,
+    repo = Depends(get_frame_repository),
+    session: Session = Depends(get_session),
+):
+    token = websocket.query_params.get("token")
+
+    if not token:
+        await websocket.close(code=1008)
+        return
+
+    try:
+        current_user = get_user_from_token(token, session)
+
+        camera = session.get(Camera, camera_id)
+        if not camera:
+            await websocket.close(code=1008)
+            return
+
+        check_camera_access(session, camera_id, current_user.id)
+
+    except Exception as e:
+        await websocket.close(code=1008)
+        return
+
+    await websocket.accept()
+
+    last_frame = None
+
+    try:
+        while True:
+            frame = repo.get(camera_id)
+
+            if frame and frame != last_frame:
+                await websocket.send_json({"data": frame})
+                last_frame = frame
+
+            await asyncio.sleep(0.1)
+
+    except WebSocketDisconnect:
+        pass
