@@ -3,8 +3,7 @@ from sqlmodel import select
 from passlib.context import CryptContext
 
 from app.models import Camera, CameraUser
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from app.services.utils import verify_api_key, pwd_context
 
 
 def verify_api_key(api_key: str, hashed: str) -> bool:

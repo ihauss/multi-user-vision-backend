@@ -8,6 +8,7 @@ from app.database import get_session
 from app.services.camera_service import create_camera, add_user_to_camera, remove_user_from_camera, delete_camera
 from app.services.frame_service import push_frame, get_last_frame
 from app.services.camera_service import check_camera_access
+from app.services.events import get_events
 from app.schemas.camera import CameraResponse, AddUserRequest
 from app.models import User, Camera
 from app.core.dependencies import get_current_user, get_frame_repository
@@ -153,3 +154,16 @@ async def websocket_camera_stream(
 
     except WebSocketDisconnect:
         pass
+
+
+@router.get("/{camera_id}/events")
+def get_camera_events(
+    camera_id: int,
+    session: Session = Depends(get_session),
+    current_user = Depends(get_current_user),
+):
+    return get_events(
+        session=session,
+        camera_id=camera_id,
+        current_user=current_user
+    )
