@@ -34,3 +34,11 @@ def client_fixture(session):
         yield client
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def clear_repo():
+    from app.core.dependencies import get_frame_repository
+    repo = get_frame_repository()
+    if hasattr(repo, "storage"):
+        repo.storage.clear()

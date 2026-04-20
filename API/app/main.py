@@ -11,18 +11,45 @@ from app.api import routes_events
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # startup
+    """
+    Application lifecycle manager.
+
+    This function is executed:
+        - Once at startup
+        - Once at shutdown
+
+    Args:
+        app (FastAPI): FastAPI application instance.
+
+    Behavior:
+        - On startup:
+            - Initializes the database schema.
+        - On shutdown:
+            - Performs cleanup (if needed).
+
+    Notes:
+        - This replaces older @app.on_event("startup") patterns.
+        - Ensures proper lifecycle management in async environments.
+    """
+    # Startup phase
     print("Starting app")
+
+    # Create all database tables if they do not exist
+    # (based on SQLModel metadata)
     SQLModel.metadata.create_all(engine)
 
     yield
 
-    # shutdown
+    # Shutdown phase
     print("Stopping app")
 
 
-app = FastAPI(lifespan=lifespan)  # 🔥 IMPORTANT
+# Initialize FastAPI application with lifecycle management
+app = FastAPI(lifespan=lifespan)
 
+
+# Register API routers
+# Each router handles a specific domain of the application
 app.include_router(user_router)
 app.include_router(camera_router)
 app.include_router(routes_events.router)
