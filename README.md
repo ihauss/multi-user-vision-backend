@@ -92,13 +92,15 @@ These aspects are documented in the code and planned for future improvements.
 
 ## Future
 
-Phase 1
+*Phase 1*
 * upgrade backend security
 * camera SDK
 * minimal UI
-Phase 2
+
+*Phase 2*
 * pagination + filters
 * websocket events
-Phase 3
+
+*Phase 3*
 * images storage
 * AI pipeline
