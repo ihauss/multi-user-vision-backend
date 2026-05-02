@@ -43,14 +43,24 @@ def get_user_from_token(token: str, session: Session):
         - The "sub" field is expected to contain the user ID.
         - Token validation (signature, expiration) is handled in decode_access_token.
     """
-    payload = decode_access_token(token)
+    try:
+        payload = decode_access_token(token)
+    except (JWTError, ValueError):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
     sub = payload.get("sub")
 
     if not sub:
-        raise HTTPException(status_code=401, detail="Invalid token payload")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
 
     try:
-        payload = decode_access_token(token)
         user_id = int(payload.get("sub"))
     except (JWTError, TypeError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid token")

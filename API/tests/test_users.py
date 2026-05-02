@@ -79,3 +79,11 @@ def test_delete_me(client):
     })
 
     assert login.status_code == 401
+
+
+def test_invalid_token():
+    response = client.get(
+        "/users/me",
+        headers={"Authorization": "Bearer invalid"}
+    )
+    assert response.status_code == 401
