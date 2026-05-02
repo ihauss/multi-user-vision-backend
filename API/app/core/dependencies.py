@@ -11,7 +11,7 @@ from app.core.security import decode_access_token
 from app.repositories.in_memory_frame_repository import InMemoryFrameRepository
 from app.repositories.redis_frame_repository import RedisFrameRepository
 from app.repositories.frame_repository import FrameRepository
-from app.core.config import USE_REDIS
+from app.core.config import USE_REDIS, REDIS_URL
 
 
 # OAuth2 scheme used to extract the Bearer token from incoming requests.
@@ -43,16 +43,26 @@ def get_user_from_token(token: str, session: Session):
         - The "sub" field is expected to contain the user ID.
         - Token validation (signature, expiration) is handled in decode_access_token.
     """
+    payload = decode_access_token(token)
+    sub = payload.get("sub")
+
+    if not sub:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
     try:
         payload = decode_access_token(token)
         user_id = int(payload.get("sub"))
-    except (JWTError, TypeError):
+    except (JWTError, TypeError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid token")
 
     user = session.get(User, user_id)
 
     if not user:
-        raise HTTPException(status_code=401, detail="User not found")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
 
     return user
 
@@ -97,12 +107,13 @@ def get_frame_repository() -> FrameRepository:
         - Environment variables control which backend is used.
         - Redis configuration includes buffer size for frame storage.
     """
-    use_redis = os.getenv("USE_REDIS", "false").lower() == "true"
-
-    if not use_redis:
+    if not USE_REDIS:
         return InMemoryFrameRepository()
 
-    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    if not REDIS_URL:
+        raise ValueError("REDIS_URL is not set")
+
+    redis_url = REDIS_URL
     max_frames = int(os.getenv("FRAME_BUFFER_SIZE", 10))
 
     return RedisFrameRepository(

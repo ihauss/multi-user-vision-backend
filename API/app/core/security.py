@@ -1,10 +1,10 @@
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
-from jose import jwt
+from jose import jwt, JWTError
 from app.core.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 
-def create_access_token(data: dict):
+def create_access_token(data: dict) -> str:
     """
     Generate a signed JWT access token.
 
@@ -26,17 +26,24 @@ def create_access_token(data: dict):
     """
     to_encode = data.copy()
 
+    # Define token issued time
+    now = datetime.utcnow()
+
     # Define token expiration time
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     # Add expiration claim to payload
-    to_encode.update({"exp": expire})
+    to_encode.update({
+        "exp": expire,
+        "iat": now,
+        "type": "access"
+    })
 
     # Encode and sign the JWT
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def decode_access_token(token: str):
+def decode_access_token(token: str) -> dict:
     """
     Decode and validate a JWT access token.
 
@@ -53,12 +60,27 @@ def decode_access_token(token: str):
         - Signature and expiration are verified automatically.
         - The calling function should handle exceptions appropriately.
     """
-    return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        raise ValueError("Invalid token")
+
+    if not payload.get("sub"):
+        raise ValueError("Invalid token payload")
+
+    if payload.get("type") != "access":
+        raise ValueError("Invalid token type")
+
+    return payload
 
 
 # Cryptographic context for password hashing and verification.
 # Uses bcrypt to ensure strong protection against brute-force attacks.
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__rounds=12
+)
 
 
 def hash_password(password: str) -> str:
