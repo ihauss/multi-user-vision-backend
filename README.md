@@ -93,7 +93,6 @@ These aspects are documented in the code and planned for future improvements.
 ## Future
 
 *Phase 1*
-* upgrade backend security
 * camera SDK
 * minimal UI
 
